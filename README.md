@@ -2,7 +2,7 @@
 
 Et nettleserbasert kortspill inspirert av det klassiske selskapsbordet «Gris» (også kjent som «Pig» på engelsk).
 
-Spill det her: **[plastfuglen.github.io/gris](https://plastfuglen.github.io/GRIS)**
+Spill det her: **[plastfuglen.github.io/GRIS](https://plastfuglen.github.io/GRIS)**
 
 ---
 
