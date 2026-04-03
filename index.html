@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Boogaloo&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #1a0a2e;
+  --pink: #ff4da6;
+  --yellow: #ffe93d;
+  --teal: #00e5c8;
+  --orange: #ff7c2a;
+  --white: #fff8ff;
+  --muted: #9980b8;
+  --panel: rgba(255,255,255,0.06);
+  --panel-border: rgba(255,255,255,0.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+  color: var(--white);
+  min-height: 100vh;
+  background-image:
+    radial-gradient(ellipse at 20% 20%, rgba(255,77,166,0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 80%, rgba(0,229,200,0.10) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, rgba(100,40,160,0.30) 0%, transparent 70%);
+}
+#app {
+  max-width: 860px; margin: 0 auto;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
+}
+header { text-align: center; }
+header h1 {
+  font-family: 'Boogaloo', cursive;
+  font-size: clamp(2.6rem, 8vw, 5rem); letter-spacing: 0.18em; line-height: 1;
+  background: linear-gradient(135deg, var(--pink), var(--yellow), var(--teal));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  filter: drop-shadow(0 0 20px rgba(255,77,166,0.5));
+}
+header p { color: var(--muted); font-size: 0.88rem; margin-top: 2px; font-style: italic; }
+
+/* NPC grid */
+.npc-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+
+/* Player panel */
+.player-panel {
+  background: var(--panel); border: 1.5px solid var(--panel-border);
+  border-radius: 16px; padding: 12px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.player-panel.is-active { border-color: var(--yellow); box-shadow: 0 0 18px rgba(255,233,61,0.35); }
+.player-panel.is-out    { opacity: 0.45; }
+.panel-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.15);
+}
+.pname   { font-family: 'Boogaloo', cursive; font-size: 1rem; letter-spacing: 0.05em; }
+.pstatus { font-size: 0.72rem; color: var(--muted); font-style: italic; }
+
+/* GRIS letters */
+.gris-letters { font-family: 'Boogaloo', cursive; font-size: 1.3rem; letter-spacing: 0.15em; min-height: 1.6rem; margin-top: 2px; }
+.gris-letters span      { color: rgba(255,255,255,0.14); }
+.gris-letters .lit-G    { color: var(--pink);   text-shadow: 0 0 8px var(--pink); }
+.gris-letters .lit-R    { color: var(--orange); text-shadow: 0 0 8px var(--orange); }
+.gris-letters .lit-I    { color: var(--yellow); text-shadow: 0 0 8px var(--yellow); }
+.gris-letters .lit-S    { color: var(--teal);   text-shadow: 0 0 8px var(--teal); }
+
+/* NPC card backs */
+.hand-small { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 6px; }
+.card-mini {
+  width: 28px; height: 40px; border-radius: 4px;
+  background: linear-gradient(135deg,#2a1060,#180840); border: 1px solid #5a30b0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1rem; color: rgba(180,140,255,0.3);
+  box-shadow: 1px 2px 5px rgba(0,0,0,0.35);
+  animation: pop 0.25s cubic-bezier(.175,.885,.32,1.275);
+}
+
+/* Center table */
+#center-table {
+  background: rgba(0,0,0,0.3); border: 1.5px solid var(--panel-border);
+  border-radius: 20px; padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.deck-wrapper { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.deck-label { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+.back-card {
+  width: 64px; height: 90px; border-radius: 8px;
+  background: linear-gradient(135deg,#2a1060,#180840); border: 1.5px solid #5a30b0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; color: rgba(180,140,255,0.3);
+  box-shadow: 3px 5px 16px rgba(0,0,0,0.5); position: relative;
+}
+.back-card::before {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(140,100,220,0.3); border-radius: 5px;
+}
+#table-msg { flex: 1; text-align: center; font-size: 0.88rem; color: var(--muted); font-style: italic; min-width: 140px; }
+#table-msg strong { color: var(--yellow); font-style: normal; }
+.discard-area {
+  width: 64px; min-height: 90px; border: 1.5px dashed rgba(255,255,255,0.15);
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; color: rgba(255,255,255,0.2); font-style: italic;
+  position: relative; overflow: hidden;
+}
+.discard-card {
+  position: absolute; width: 62px; height: 88px;
+  background: #fff8f0; border-radius: 7px; border: 1px solid #ccc;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 700; color: #2a1a0a; animation: pop 0.2s ease-out;
+}
+.discard-card.red { color: #c0392b; }
+
+/* Human panel */
+#human-panel {
+  background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.15);
+  border-radius: 20px; padding: 16px 20px;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+#human-panel.is-active { border-color: var(--teal); box-shadow: 0 0 22px rgba(0,229,200,0.3); }
+.human-top {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px; margin-bottom: 12px;
+}
+.human-info { display: flex; align-items: center; gap: 10px; }
+#human-hand { display: flex; flex-wrap: wrap; gap: 8px; min-height: 100px; align-items: center; }
+.card-large {
+  width: 64px; height: 90px; background: #fff8f0;
+  border-radius: 8px; border: 1.5px solid #ccc;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  font-weight: 700; color: #2a1a0a;
+  box-shadow: 2px 4px 10px rgba(0,0,0,0.4);
+  cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+  animation: pop 0.28s cubic-bezier(.175,.885,.32,1.275);
+  user-select: none;
+}
+.card-large:hover     { transform: translateY(-8px) scale(1.05); box-shadow: 2px 12px 20px rgba(0,0,0,0.5); }
+.card-large.red       { color: #c0392b; }
+.card-large.selected  { transform: translateY(-14px); border-color: var(--teal); box-shadow: 0 0 14px rgba(0,229,200,0.5); }
+.card-large.inert     { cursor: default; }
+.card-large.inert:hover { transform: none; box-shadow: 2px 4px 10px rgba(0,0,0,0.4); }
+.card-large .cv { font-size: 1.1rem; line-height: 1; }
+.card-large .cs { font-size: 1.4rem; line-height: 1; }
+
+/* Difficulty */
+#difficulty-row {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px; padding: 12px 16px;
+}
+.diff-label { font-size: 0.78rem; color: var(--muted); font-style: italic; }
+.diff-options { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.diff-btn {
+  font-family: 'Boogaloo', cursive; font-size: 0.88rem; letter-spacing: 0.04em;
+  padding: 7px 18px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06); color: var(--muted);
+  cursor: pointer; transition: all 0.18s;
+}
+.diff-btn:hover:not(.locked) { border-color: rgba(255,255,255,0.4); color: var(--white); }
+.diff-btn.active[data-level="easy"]    { background: rgba(0,229,200,0.18); border-color: var(--teal);   color: var(--teal); }
+.diff-btn.active[data-level="medium"]  { background: rgba(255,233,61,0.18); border-color: var(--yellow); color: var(--yellow); }
+.diff-btn.active[data-level="hard"]    { background: rgba(255,124,42,0.18); border-color: var(--orange); color: var(--orange); }
+.diff-btn.active[data-level="extreme"] { background: rgba(255,77,166,0.18); border-color: var(--pink);   color: var(--pink); }
+.diff-btn.locked { opacity: 0.35; cursor: not-allowed; }
+.diff-desc { font-size: 0.75rem; color: var(--muted); font-style: italic; text-align: center; }
+
+/* Hand size buttons — same shape as diff-btn but teal accent */
+.hand-btn {
+  font-family: 'Boogaloo', cursive; font-size: 0.88rem; letter-spacing: 0.04em;
+  padding: 7px 14px; border-radius: 50px; border: 1.5px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.06); color: var(--muted);
+  cursor: pointer; transition: all 0.18s; min-width: 38px;
+}
+.hand-btn:hover:not(.locked) { border-color: rgba(255,255,255,0.4); color: var(--white); }
+.hand-btn.active { background: rgba(0,229,200,0.18); border-color: var(--teal); color: var(--teal); }
+.hand-btn.locked { opacity: 0.35; cursor: not-allowed; }
+
+/* Controls */
+#pass-area { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; }
+.btn {
+  font-family: 'Boogaloo', cursive; font-size: 1rem; letter-spacing: 0.05em;
+  padding: 11px 28px; border: none; border-radius: 50px; cursor: pointer; transition: all 0.18s;
+}
+.btn:active:not(:disabled) { transform: scale(0.94); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-pass {
+  background: linear-gradient(135deg, var(--teal), #00b89e); color: #001a18;
+  box-shadow: 0 4px 16px rgba(0,229,200,0.35);
+}
+.btn-pass:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(0,229,200,0.55); transform: translateY(-2px); }
+.btn-swap {
+  background: linear-gradient(135deg, var(--orange), #cc5500); color: #fff;
+  box-shadow: 0 4px 16px rgba(255,124,42,0.35);
+}
+.btn-swap:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(255,124,42,0.55); transform: translateY(-2px); }
+.card-large.swappable {
+  border-color: var(--orange);
+  box-shadow: 0 0 14px rgba(255,124,42,0.6);
+  animation: swappablePulse 1s ease-in-out infinite alternate, pop 0.28s cubic-bezier(.175,.885,.32,1.275);
+}
+@keyframes swappablePulse {
+  from { box-shadow: 0 0 8px rgba(255,124,42,0.4); }
+  to   { box-shadow: 0 0 22px rgba(255,124,42,0.9); }
+}
+.btn-new {
+  background: linear-gradient(135deg, var(--pink), #cc2080); color: #fff;
+  box-shadow: 0 4px 16px rgba(255,77,166,0.35);
+}
+.btn-new:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(255,77,166,0.55); transform: translateY(-2px); }
+
+/* Log */
+#log {
+  background: rgba(0,0,0,0.35); border: 1px solid var(--panel-border);
+  border-radius: 12px; padding: 10px 14px;
+  max-height: 110px; overflow-y: auto; font-size: 0.82rem; line-height: 1.55;
+  scrollbar-width: thin; scrollbar-color: var(--muted) transparent;
+}
+#log p { margin: 1px 0; color: var(--muted); }
+#log p:first-child { color: var(--white); }
+.log-hi  { color: var(--yellow) !important; }
+.log-bad { color: var(--pink)   !important; }
+.log-ok  { color: var(--teal)   !important; }
+
+/* Scoreboard */
+#scoreboard { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.score-chip {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px; padding: 5px 14px; font-size: 0.8rem;
+  display: flex; align-items: center; gap: 6px;
+}
+.score-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Rules */
+.rules-box {
+  font-size: 0.78rem; color: var(--muted);
+  background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 10px 14px; line-height: 1.6;
+}
+.rules-box strong { color: var(--yellow); }
+
+/* Thumb overlay */
+#thumb-overlay {
+  position: fixed; inset: 0; z-index: 180;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(10,0,25,0); transition: background 0.2s; cursor: pointer;
+}
+#thumb-overlay.visible { background: rgba(10,0,25,0.65); }
+#thumb-big-btn {
+  background: linear-gradient(135deg,#ffe93d,#ffb800);
+  border: none; border-radius: 28px; padding: 28px 52px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  animation: pulseBtn 0.7s ease-in-out infinite alternate;
+  cursor: pointer; transition: transform 0.1s; pointer-events: none;
+}
+#thumb-big-btn:active { transform: scale(0.93); }
+@keyframes pulseBtn {
+  from { box-shadow: 0 0 0 0 rgba(255,233,61,0.7), 0 8px 40px rgba(255,184,0,0.5); transform: scale(1); }
+  to   { box-shadow: 0 0 0 22px rgba(255,233,61,0), 0 8px 40px rgba(255,184,0,0.7); transform: scale(1.04); }
+}
+#thumb-big-btn.urgent { animation: urgentShake 0.35s infinite, pulseBtn 0.35s ease-in-out infinite alternate; }
+@keyframes urgentShake {
+  0%,100% { transform: rotate(0deg); }
+  25%     { transform: rotate(-4deg) scale(1.05); }
+  75%     { transform: rotate(4deg)  scale(1.05); }
+}
+#thumb-emoji    { font-size: 5rem; line-height: 1; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
+#thumb-label    { font-family: 'Boogaloo', cursive; font-size: 2rem; letter-spacing: 0.08em; color: #1a1000; }
+#thumb-sublabel { font-size: 0.85rem; color: rgba(30,20,0,0.65); font-style: italic; margin-top: -6px; }
+
+/* Modal */
+#modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,0,25,0.88);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 200; backdrop-filter: blur(6px);
+}
+#modal {
+  background: linear-gradient(160deg,#1e0a3c,#0d0520);
+  border: 2px solid var(--pink); border-radius: 24px;
+  padding: 36px 40px; text-align: center;
+  max-width: 420px; width: 90%;
+  box-shadow: 0 0 60px rgba(255,77,166,0.35);
+  animation: pop 0.4s cubic-bezier(.175,.885,.32,1.275);
+}
+#modal h2 {
+  font-family: 'Boogaloo', cursive; font-size: 2.2rem; letter-spacing: 0.1em; margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--pink), var(--yellow));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+.modal-icon { font-size: 3rem; display: block; margin-bottom: 6px; animation: iconPulse 0.6s ease-in-out infinite alternate; }
+@keyframes iconPulse { from { transform: scale(1); } to { transform: scale(1.2); } }
+.modal-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 4px; font-style: italic; }
+.result-rows { margin: 14px 0; text-align: left; }
+.result-row {
+  display: flex; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 0.92rem;
+}
+
+/* Animations */
+@keyframes pop {
+  from { transform: scale(0.55); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+.thumb-flash {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 5rem; pointer-events: none; z-index: 150;
+  animation: flashGo 1.2s ease-out forwards;
+}
+@keyframes flashGo {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(0.3); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1.5); }
+  60%  { opacity: 1; transform: translate(-50%,-50%) scale(1);   }
+  100% { opacity: 0; transform: translate(-50%,-80%) scale(0.8); }
+}
+
+/* Help button */
+#help-btn {
+  position: fixed; top: 14px; right: 16px; z-index: 100;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.2);
+  color: var(--muted); font-family: 'Boogaloo', cursive; font-size: 1.1rem;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.18s; user-select: none;
+}
+#help-btn:hover { background: rgba(255,255,255,0.15); color: var(--white); border-color: rgba(255,255,255,0.4); }
+
+#help-popup {
+  position: fixed; top: 56px; right: 16px; z-index: 100;
+  width: 300px; background: linear-gradient(160deg,#1e0a3c,#0d0520);
+  border: 1.5px solid rgba(255,255,255,0.15); border-radius: 14px;
+  padding: 14px 16px; font-size: 0.78rem; color: var(--muted); line-height: 1.65;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: pop 0.2s cubic-bezier(.175,.885,.32,1.275);
+}
+#help-popup strong { color: var(--yellow); }
+
+@media(max-width:580px){
+  #help-popup { right: 8px; left: 8px; width: auto; }
+}
+
+.hidden { display: none !important; }
+
+@media(max-width:580px){
+  .npc-grid { gap: 6px; }
+  .card-large { width: 52px; height: 74px; }
+  #modal { padding: 22px 16px; }
+  #thumb-big-btn { padding: 22px 32px; }
+  #thumb-label { font-size: 1.5rem; }
+  #thumb-emoji { font-size: 3.5rem; }
+}
+</style>
+<script data-goatcounter="https://plastfuglengithub.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>&#x1F437; GRIS</h1>
+    <p>Saml fire like &mdash; og legg tommelen ned f&#xF8;r de andre!</p>
+  </header>
+
+  <!-- NPC PANELS -->
+  <div class="npc-grid">
+    <div class="player-panel" id="panel-npc1">
+      <div class="panel-top">
+        <div class="avatar" style="background:rgba(74,144,217,0.2)">&#x1F3AD;</div>
+        <div>
+          <div class="pname" style="color:#4a90d9">Bj&#xF8;rn</div>
+          <div class="pstatus" id="pstatus-npc1">Venter...</div>
+        </div>
+      </div>
+      <div class="gris-letters" id="gris-npc1"></div>
+      <div class="hand-small" id="hand-npc1"></div>
+    </div>
+    <div class="player-panel" id="panel-npc2">
+      <div class="panel-top">
+        <div class="avatar" style="background:rgba(230,126,34,0.2)">&#x1F98A;</div>
+        <div>
+          <div class="pname" style="color:#e67e22">Sigrid</div>
+          <div class="pstatus" id="pstatus-npc2">Venter...</div>
+        </div>
+      </div>
+      <div class="gris-letters" id="gris-npc2"></div>
+      <div class="hand-small" id="hand-npc2"></div>
+    </div>
+    <div class="player-panel" id="panel-npc3">
+      <div class="panel-top">
+        <div class="avatar" style="background:rgba(155,89,182,0.2)">&#x1F9D9;</div>
+        <div>
+          <div class="pname" style="color:#9b59b6">Ivar</div>
+          <div class="pstatus" id="pstatus-npc3">Venter...</div>
+        </div>
+      </div>
+      <div class="gris-letters" id="gris-npc3"></div>
+      <div class="hand-small" id="hand-npc3"></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div id="center-table">
+    <div class="deck-wrapper">
+      <div class="deck-label">Bunke</div>
+      <div class="back-card">&#x2736;</div>
+    </div>
+    <div id="table-msg">Trykk <strong>Nytt spill</strong> for &#xe5; starte!</div>
+    <div class="deck-wrapper">
+      <div class="deck-label">Siste pass</div>
+      <div class="discard-area" id="discard-area"><span>&#x2014;</span></div>
+    </div>
+  </div>
+
+  <!-- HUMAN PANEL -->
+  <div class="player-panel" id="human-panel">
+    <div class="human-top">
+      <div class="human-info">
+        <div class="avatar" style="background:rgba(0,229,200,0.15);font-size:1.4rem">&#x1FAB5;</div>
+        <div>
+          <div class="pname" style="color:var(--teal)">Deg</div>
+          <div class="pstatus" id="pstatus-human">Trykk &quot;Nytt spill&quot;</div>
+        </div>
+      </div>
+      <div class="gris-letters" id="gris-human"></div>
+    </div>
+    <div id="human-hand"></div>
+    <div id="pass-area" style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:12px;">
+      <button class="btn btn-pass hidden" id="btn-pass" onclick="humanPassCard()" disabled>&#x1F504; Send valgt kort videre</button>
+      <button class="btn btn-swap hidden" id="btn-swap" onclick="humanSwapCard()">&#x1F501; Bytt gjentakende kort</button>
+    </div>
+  </div>
+
+  <!-- DIFFICULTY -->
+  <div id="difficulty-row">
+    <span class="diff-label">Vanskelighetsgrad (kan kun endres mellom spill):</span>
+    <div class="diff-options">
+      <button class="diff-btn" data-level="easy"    id="dbtn-easy"    onclick="setDifficulty('easy')"   >&#x1F423; Lett</button>
+      <button class="diff-btn active" data-level="medium"  id="dbtn-medium"  onclick="setDifficulty('medium')" >&#x1F3AF; Medium</button>
+      <button class="diff-btn" data-level="hard"    id="dbtn-hard"    onclick="setDifficulty('hard')"   >&#x1F525; Vanskelig</button>
+      <button class="diff-btn" data-level="extreme" id="dbtn-extreme" onclick="setDifficulty('extreme')">&#x1F480; Ekstrem</button>
+    </div>
+    <span class="diff-desc" id="diff-desc">NPC-er reagerer normalt &mdash; du har 2,4&nbsp;sek p&#xe5; &#xe5; legge ned tommelen</span>
+  </div>
+
+  <!-- HAND SIZE -->
+  <div id="handsize-row" style="display:flex;flex-direction:column;align-items:center;gap:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:12px 16px;">
+    <span class="diff-label">Kort på hånden (kan kun endres mellom spill):</span>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;">
+      <button class="hand-btn active" data-size="4" onclick="setHandSize(4)">4</button>
+      <button class="hand-btn" data-size="5" onclick="setHandSize(5)">5</button>
+      <button class="hand-btn" data-size="6" onclick="setHandSize(6)">6</button>
+      <button class="hand-btn" data-size="7" onclick="setHandSize(7)">7</button>
+      <button class="hand-btn" data-size="8" onclick="setHandSize(8)">8</button>
+    </div>
+    <span class="diff-desc" id="handsize-desc">Saml <strong style="color:var(--teal)">4 like</strong> for å legge ned tommelen</span>
+  </div>
+  <div id="log"><p>Velkommen til GRIS! Trykk &quot;Nytt spill&quot; for &#xe5; starte.</p></div>
+
+  <div id="scoreboard">
+    <div class="score-chip"><span class="score-dot" style="background:var(--teal)"></span>Deg: <strong id="sc-human">0</strong></div>
+    <div class="score-chip"><span class="score-dot" style="background:#4a90d9"></span>Bj&#xF8;rn: <strong id="sc-npc1">0</strong></div>
+    <div class="score-chip"><span class="score-dot" style="background:#e67e22"></span>Sigrid: <strong id="sc-npc2">0</strong></div>
+    <div class="score-chip"><span class="score-dot" style="background:#9b59b6"></span>Ivar: <strong id="sc-npc3">0</strong></div>
+  </div>
+
+  <div style="display:flex;justify-content:center;">
+    <button class="btn btn-new" id="btn-new" onclick="startNewFullGame()">&#x1F3AE; Nytt spill</button>
+  </div>
+
+  <div class="rules-box" style="display:none"></div>
+
+</div><!-- /#app -->
+
+<!-- HELP BUTTON -->
+<button id="help-btn" onclick="toggleHelp()" title="Regler">?</button>
+<div id="help-popup" class="hidden">
+  <strong>Regler</strong><br><br>
+  Alle får <strong>4 kort</strong>. Velg ett og send det videre &mdash; alle sender samtidig.<br><br>
+  Målet er å samle <strong>fire kort av samme sort</strong> (f.eks. fire &#x2665;).<br><br>
+  Når noen har fire like, legger de <strong>tommelen ned</strong>. De andre må gjøre det så raskt som mulig &mdash; klikk på skjermen eller trykk <strong>mellomrom</strong>.<br><br>
+  Den <strong>siste</strong> får en bokstav:
+  <strong style="color:var(--pink)">G</strong> &#x2192;
+  <strong style="color:var(--orange)">R</strong> &#x2192;
+  <strong style="color:var(--yellow)">I</strong> &#x2192;
+  <strong style="color:var(--teal)">S</strong>.
+  Staver du <strong>GRIS</strong> er du ute!
+</div>
+
+<!-- THUMB OVERLAY (outside #app so it covers everything) -->
+<div id="thumb-overlay" class="hidden" onclick="humanThumbDown()">
+  <div id="thumb-big-btn">
+    <div id="thumb-emoji">&#x1F44D;</div>
+    <div id="thumb-label">TOMMEL NED!</div>
+    <div id="thumb-sublabel">Trykk N&#xc5; eller mellomrom &mdash; f&#xF8;r det er for sent!</div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay" class="hidden">
+  <div id="modal">
+    <span class="modal-icon" id="modal-icon">&#x1F437;</span>
+    <h2 id="modal-title">Runde slutt!</h2>
+    <p class="modal-sub" id="modal-sub"></p>
+    <div class="result-rows" id="modal-results"></div>
+    <button class="btn btn-new" id="modal-btn" style="margin-top:18px" onclick="onModalBtn()">&#x25B6; Neste runde</button>
+  </div>
+</div>
+
+<script>
+// ================================================
+// DIFFICULTY CONFIG
+// ================================================
+// NPC reaction times modelled on real human visual-reaction research:
+// Average human: ~250 ms. Fast: ~180 ms. Slow/distracted: ~450-700 ms.
+// npcBases = minimum delay before NPC reacts (ms)
+// npcSpreads = random range added on top of base (ms)
+// humanWindow = how long the human has to react before being counted last
+const DIFF = {
+  easy:    { npcBases:[700,800,950],   npcSpreads:[300,350,400], humanWindow:4000, desc:'NPC-er er trege \u2014 du har 4\u00a0sek p\u00e5 \u00e5 legge ned tommelen' },
+  medium:  { npcBases:[380,460,560],   npcSpreads:[150,200,250], humanWindow:2800, desc:'NPC-er reagerer normalt \u2014 du har 2,8\u00a0sek p\u00e5 \u00e5 legge ned tommelen' },
+  hard:    { npcBases:[220,260,310],   npcSpreads:[80,100,140],  humanWindow:1600, desc:'NPC-er reagerer raskt \u2014 du har 1,6\u00a0sek p\u00e5 \u00e5 legge ned tommelen' },
+  extreme: { npcBases:[160,185,220],   npcSpreads:[40,60,80],    humanWindow:1000, desc:'NPC-er er lynraske \u2014 du har bare 1\u00a0sek!' },
+};
+
+// ================================================
+// CONSTANTS
+// ================================================
+const SUITS   = ['\u2665','\u2666','\u2663','\u2660'];
+const VALUES  = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const RED     = new Set(['\u2665','\u2666']);
+const LETTERS = ['G','R','I','S'];
+const PLAYERS = [
+  { id:'human', name:'Deg',    isHuman:true  },
+  { id:'npc1',  name:'Bj\xF8rn',  isHuman:false },
+  { id:'npc2',  name:'Sigrid', isHuman:false },
+  { id:'npc3',  name:'Ivar',   isHuman:false },
+];
+
+// ================================================
+// STATE
+// ================================================
+let difficulty    = 'medium';
+let handSize      = 4;
+let gameActive    = false;
+let phase         = 'idle';   // idle | passing | thumbs
+let grisCount     = {};
+let eliminated    = {};
+let hands         = {};
+let selectedCard  = null;
+let thumbsDown    = new Set();
+let thumbOrder    = [];
+let thumbStartTime = 0;
+let humanReactionMs = null;
+let npcReactionMs = {};   // id -> ms
+let timers        = [];
+let modalAction   = 'nextRound';
+let npcProfiles   = {};
+let receivedCount = new Map(); // Map<card, timesReceivedByHuman>
+let swappableCard = null;     // card eligible for deck swap
+
+// ================================================
+// DIFFICULTY
+// ================================================
+function setDifficulty(level) {
+  if (gameActive) return;
+  difficulty = level;
+  document.querySelectorAll('.diff-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.level === level)
+  );
+  document.getElementById('diff-desc').textContent = DIFF[level].desc;
+}
+
+function lockDifficulty(locked) {
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.toggle('locked', locked));
+  document.querySelectorAll('.hand-btn').forEach(b => b.classList.toggle('locked', locked));
+  document.getElementById('diff-desc').textContent = locked
+    ? 'Kan ikke endres under et aktivt spill'
+    : DIFF[difficulty].desc;
+  if (locked) {
+    document.getElementById('handsize-desc').textContent = 'Kan ikke endres under et aktivt spill';
+  } else {
+    document.getElementById('handsize-desc').innerHTML =
+      'Saml <strong style="color:var(--teal)">' + handSize + ' like</strong> for \u00e5 legge ned tommelen';
+  }
+}
+
+function setHandSize(n) {
+  if (gameActive) return;
+  handSize = n;
+  document.querySelectorAll('.hand-btn').forEach(b =>
+    b.classList.toggle('active', parseInt(b.dataset.size) === n)
+  );
+  document.getElementById('handsize-desc').innerHTML =
+    'Saml <strong style="color:var(--teal)">' + n + ' like</strong> for \u00e5 legge ned tommelen';
+}
+
+// ================================================
+// DECK
+// ================================================
+function makeDeck() {
+  const d = [];
+  for (const s of SUITS) for (const v of VALUES) d.push({ suit:s, value:v });
+  return shuffle(d);
+}
+function shuffle(a) {
+  const b = [...a];
+  for (let i = b.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [b[i],b[j]] = [b[j],b[i]];
+  }
+  return b;
+}
+
+// ================================================
+// GAME FLOW
+// ================================================
+function startNewFullGame() {
+  clearAllTimers();
+  gameActive = true;
+  lockDifficulty(true);
+  grisCount  = { human:0, npc1:0, npc2:0, npc3:0 };
+  eliminated = { human:false, npc1:false, npc2:false, npc3:false };
+  updateScoreUI();
+  PLAYERS.forEach(p => {
+    const panelId = p.isHuman ? 'human-panel' : 'panel-'+p.id;
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.remove('is-out');
+    setStatus(p.id, p.isHuman ? 'Velg et kort \u2192' : 'Venter...');
+  });
+  addLog('=== Nytt spill! ===', 'log-hi');
+  dealRound();
+}
+
+function dealRound() {
+  clearAllTimers();
+  phase        = 'passing';
+  selectedCard = null;
+  thumbsDown.clear();
+  thumbOrder   = [];
+  receivedCount = new Map();
+  swappableCard = null;
+  rollNpcProfiles();
+
+  const deck = makeDeck();
+  PLAYERS.forEach(p => {
+    hands[p.id] = eliminated[p.id] ? [] : deck.splice(0, handSize);
+  });
+
+  renderAll();
+  renderGrisAll();
+  updateTableMsg('Velg ett kort og send videre!');
+  setStatus('human', 'Klikk et kort, deretter \u201cSend videre\u201d');
+  PLAYERS.filter(p => !p.isHuman && !eliminated[p.id]).forEach(p => setStatus(p.id, 'Tenker...'));
+
+  // Edge case: check if anyone was dealt four of a kind immediately
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  const instantWinners = active.filter(p => hasFourOfKind(p.id));
+  if (instantWinners.length > 0) {
+    addLog('Ny runde! ' + handSize + ' kort delt ut.', 'log-hi');
+    timers.push(setTimeout(() => startThumbPhase(instantWinners[0].id), 400));
+    return;
+  }
+
+  showUI('passing');
+  addLog('Ny runde! ' + handSize + ' kort delt ut.', 'log-hi');
+}
+
+// ================================================
+// PASSING
+// ================================================
+function humanClickCard(card) {
+  if (phase !== 'passing') return;
+  selectedCard = card;
+  renderHumanHand(true);
+}
+
+// BUG FIX 1: humanPassCard was missing its closing brace,
+// and humanSwapCard was floating outside any function declaration.
+function humanPassCard() {
+  if (!selectedCard || phase !== 'passing') return;
+  document.getElementById('btn-swap').classList.add('hidden');
+  doPassStep();
+}
+
+function humanSwapCard() {
+  if (!swappableCard || phase !== 'passing') return;
+  // Draw a fresh card from a new deck (simulated: random card not already in any hand)
+  const allInPlay = new Set();
+  PLAYERS.forEach(p => hands[p.id].forEach(c => allInPlay.add(c.suit + c.value)));
+  const freshDeck = makeDeck().filter(c => !allInPlay.has(c.suit + c.value));
+  if (freshDeck.length === 0) { addLog('Ingen kort igjen i bunken!'); return; }
+  const newCard = freshDeck[0];
+
+  // Remove swappable card from hand, add new
+  const idx = hands.human.indexOf(swappableCard);
+  if (idx !== -1) hands.human.splice(idx, 1);
+  hands.human.push(newCard);
+
+  addLog('Du byttet ut ' + swappableCard.value + swappableCard.suit + ' med et nytt kort fra bunken!', 'log-ok');
+  receivedCount.delete(swappableCard);
+  swappableCard = null;
+  selectedCard  = null;
+
+  document.getElementById('btn-swap').classList.add('hidden');
+  renderHumanHand(true);
+  setStatus('human', 'Klikk et kort, deretter \u201cSend videre\u201d');
+}
+
+function doPassStep() {
+  showUI('none');
+
+  // NPCs each pick a card to pass
+  const npcPasses = {};
+  PLAYERS.filter(p => !p.isHuman && !eliminated[p.id]).forEach(p => {
+    npcPasses[p.id] = npcChoose(p.id);
+  });
+
+  showDiscard(selectedCard);
+
+  // Build full pass map
+  const passes = { human: selectedCard, ...npcPasses };
+
+  // Remove chosen cards from hands
+  for (const [id, card] of Object.entries(passes)) {
+    const idx = hands[id].indexOf(card);
+    if (idx !== -1) hands[id].splice(idx, 1);
+  }
+
+  // Pass clockwise among active players
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  for (let i = 0; i < active.length; i++) {
+    const from = active[i];
+    const to   = active[(i+1) % active.length];
+    if (passes[from.id]) {
+      hands[to.id].push(passes[from.id]);
+      // Track what human receives
+      if (to.id === 'human') {
+        const card = passes[from.id];
+        receivedCount.set(card, (receivedCount.get(card) || 0) + 1);
+      }
+    }
+  }
+
+  selectedCard = null;
+  addLog('Alle sender ett kort videre...');
+  renderAll();
+
+  // Check for four-of-a-kind
+  const winners = active.filter(p => hasFourOfKind(p.id));
+  if (winners.length > 0) {
+    startThumbPhase(winners[0].id);
+  } else {
+    // Find card human has received 2+ times this round
+    swappableCard = null;
+    for (const [card, count] of receivedCount.entries()) {
+      if (count >= 2 && hands.human.includes(card)) { swappableCard = card; break; }
+    }
+    timers.push(setTimeout(() => {
+      showUI('passing');
+      setStatus('human', 'Klikk et kort, deretter \u201cSend videre\u201d');
+      if (swappableCard) {
+        document.getElementById('btn-swap').classList.remove('hidden');
+        setStatus('human', 'Du kan bytte det gjentagende kortet! \u2193');
+      }
+    }, 350));
+  }
+}
+
+function hasFourOfKind(id) {
+  const cnt = {};
+  for (const c of hands[id]) cnt[c.suit] = (cnt[c.suit]||0) + 1;
+  return Object.values(cnt).some(v => v >= handSize);
+}
+
+function npcChoose(id) {
+  const hand = hands[id];
+  const cnt  = {};
+  for (const c of hand) cnt[c.suit] = (cnt[c.suit]||0) + 1;
+  let bestSuit = null, bestN = 0;
+  for (const [s,n] of Object.entries(cnt)) if (n > bestN) { bestN = n; bestSuit = s; }
+  const opts = hand.filter(c => c.suit !== bestSuit);
+  return opts.length > 0
+    ? opts[Math.floor(Math.random()*opts.length)]
+    : hand[Math.floor(Math.random()*hand.length)];
+}
+
+// ================================================
+// THUMB PHASE
+// ================================================
+function rollNpcProfiles() {
+  const cfg   = DIFF[difficulty];
+  // Shuffle the base/spread arrays so each NPC gets a random slot each round
+  const bases   = shuffle(cfg.npcBases);
+  const spreads = shuffle(cfg.npcSpreads);
+  PLAYERS.filter(p => !p.isHuman).forEach((p, i) => {
+    const base   = bases[i]   + Math.random() * 60;
+    const spread = spreads[i] + Math.random() * 60;
+    npcProfiles[p.id] = { min: base, max: base + spread };
+  });
+}
+
+function startThumbPhase(winnerId) {
+  phase = 'thumbs';
+  thumbsDown.clear();
+  thumbOrder = [];
+  humanReactionMs = null;
+  npcReactionMs = {};
+  thumbStartTime = performance.now();
+  thumbsDown.add(winnerId);
+  thumbOrder.push(winnerId);
+
+  // Winner reacted at t=0 (they triggered it)
+  const winner = PLAYERS.find(p => p.id === winnerId);
+  if (winner.isHuman) {
+    humanReactionMs = 0;
+    addLog('Du trigget tommelen! \uD83C\uDFC6', 'log-ok');
+  } else {
+    npcReactionMs[winnerId] = 0;
+  }
+
+  addLog(winner.name + ' har fire like og legger tommelen ned! \uD83D\uDC4D', 'log-ok');
+  updateTableMsg('<strong>' + winner.name + '</strong> la tommelen ned! \u261D Hvem er sist?');
+  setStatus(winnerId, '\uD83D\uDC4D Tommel ned!');
+
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  const humanWindow = DIFF[difficulty].humanWindow;
+
+  if (winnerId === 'human') {
+    // Human triggered — NPCs must react, human just watches
+    showUI('none');
+    timers.push(setTimeout(() => {
+      active.filter(p => !p.isHuman).forEach(p => scheduleNpcThumb(p.id));
+    }, 80));
+    timers.push(setTimeout(resolveThumbPhase, humanWindow + 300));
+  } else {
+    // Human must react
+    showUI('thumbs');
+    active.filter(p => !p.isHuman && p.id !== winnerId).forEach(p => scheduleNpcThumb(p.id));
+    timers.push(setTimeout(resolveThumbPhase, humanWindow));
+  }
+}
+
+function scheduleNpcThumb(id) {
+  const prof  = npcProfiles[id] || { min:400, max:1200 };
+  const delay = prof.min + Math.random() * (prof.max - prof.min);
+  timers.push(setTimeout(() => {
+    if (phase !== 'thumbs') return;
+    npcReactionMs[id] = Math.round(performance.now() - thumbStartTime);
+    thumbsDown.add(id);
+    thumbOrder.push(id);
+    setStatus(id, '\uD83D\uDC4D Tommel ned!');
+    const panel = document.getElementById('panel-'+id);
+    if (panel) { panel.classList.add('is-active'); setTimeout(() => panel.classList.remove('is-active'), 600); }
+    makeThumbUrgent();
+    const active = PLAYERS.filter(p => !eliminated[p.id]);
+    if (thumbsDown.size >= active.length) { clearAllTimers(); resolveThumbPhase(); }
+  }, delay));
+}
+
+function humanThumbDown() {
+  if (phase !== 'thumbs') return;
+  humanReactionMs = Math.round(performance.now() - thumbStartTime);
+  thumbsDown.add('human');
+  thumbOrder.push('human');
+  setStatus('human', '\uD83D\uDC4D Tommel ned!');
+  addLog('Du la tommelen ned på ' + humanReactionMs + ' ms!', 'log-ok');
+  hideThumbOverlay();
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  if (thumbsDown.size >= active.length) { clearAllTimers(); resolveThumbPhase(); }
+}
+
+function resolveThumbPhase() {
+  clearAllTimers();
+  phase = 'resolved';
+  hideThumbOverlay();
+
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  // Snapshot active player IDs before elimination changes the state
+  const activeIds = active.map(p => p.id);
+
+  // Anyone who never reacted: append them in PLAYERS order
+  active.forEach(p => { if (!thumbsDown.has(p.id)) thumbOrder.push(p.id); });
+
+  const loserId = thumbOrder[thumbOrder.length - 1];
+  const loser   = PLAYERS.find(p => p.id === loserId);
+
+  grisCount[loser.id]++;
+  const letter = LETTERS[grisCount[loser.id] - 1];
+  const isElim = grisCount[loser.id] >= 4;
+  if (isElim) eliminated[loser.id] = true;
+
+  addLog(loser.name + ' var sist! F\xE5r bokstaven "' + letter + '" \uD83D\uDC37', 'log-bad');
+  if (isElim) addLog(loser.name + ' staver GRIS og er ute! \uD83D\uDC37', 'log-bad');
+
+  updateScoreUI();
+  renderGrisAll();
+  showThumbFlash();
+
+  const remaining = PLAYERS.filter(p => !eliminated[p.id]);
+  if (remaining.length <= 1) {
+    timers.push(setTimeout(() => showGameOver(remaining[0], activeIds), 900));
+    return;
+  }
+  timers.push(setTimeout(() => showRoundModal(loser, letter, isElim, activeIds), 800));
+}
+
+// ================================================
+// MODAL
+// ================================================
+function showRoundModal(loser, letter, isElim, activeIds) {
+  const isHuman = loser.id === 'human';
+  document.getElementById('modal-icon').textContent  = isElim ? '\uD83D\uDC37' : '\uD83D\uDC4E';
+  document.getElementById('modal-title').textContent =
+    isHuman ? (isElim ? 'Du er ute! \uD83D\uDC37' : 'Oops! Du var sist! \uD83D\uDE2C')
+            : (isElim ? loser.name + ' er ute! \uD83D\uDC37' : loser.name + ' var sist!');
+  document.getElementById('modal-sub').textContent =
+    isElim ? loser.name + ' staver GRIS og er eliminert!'
+           : loser.name + ' f\xE5r bokstaven "' + letter + '" \u2192 ' + LETTERS.slice(0, grisCount[loser.id]).join('');
+  fillModalResults(activeIds);
+  modalAction = 'nextRound';
+  document.getElementById('modal-btn').textContent = '\u25B6 Neste runde';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function showGameOver(winner, activeIds) {
+  gameActive = false;
+  lockDifficulty(false);
+  const isHuman = winner && winner.id === 'human';
+  document.getElementById('modal-icon').textContent  = isHuman ? '\uD83C\uDFC6' : '\uD83C\uDF89';
+  document.getElementById('modal-title').textContent = isHuman ? 'Du vinner! \uD83C\uDFC6' : (winner ? winner.name + ' vinner!' : 'Spill slutt!');
+  document.getElementById('modal-sub').textContent   = isHuman
+    ? 'Gratulerer \u2014 du overlevde alle runder!'
+    : (winner ? winner.name + ' var siste mann st\xE5ende!' : '');
+  fillModalResults(activeIds);
+  modalAction = 'newGame';
+  document.getElementById('modal-btn').textContent = '\uD83C\uDFAE Nytt spill';
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+function fillModalResults(activeIds) {
+  const rows = PLAYERS.map(p => {
+    const ltrs = LETTERS.slice(0, grisCount[p.id]).join('') || '\u2014';
+    const tag  = eliminated[p.id] ? ' \uD83D\uDC37' : '';
+    return '<div class="result-row"><span style="font-weight:700">' + p.name + tag + '</span>'
+         + '<span style="font-family:\'Boogaloo\',cursive;letter-spacing:.12em">' + ltrs + '</span></div>';
+  }).join('');
+
+  // Only show reaction times for players who were active this round
+  const activePlayers = PLAYERS.filter(p => activeIds && activeIds.includes(p.id));
+  const times = activePlayers.map(p => {
+    const ms = p.isHuman ? humanReactionMs : (npcReactionMs[p.id] !== undefined ? npcReactionMs[p.id] : null);
+    const label = ms === 0 ? '\uD83C\uDFC6 trigget' : (ms !== null ? ms + '\u00a0ms' : 'For sent');
+    return { name: p.name, ms: ms === 0 ? -1 : ms, label, isHuman: p.isHuman };
+  }).sort((a, b) => {
+    if (a.ms === null && b.ms === null) return 0;
+    if (a.ms === null) return 1;
+    if (b.ms === null) return -1;
+    return a.ms - b.ms;
+  });
+
+  const medals = ['\uD83E\uDD47 ', '\uD83E\uDD48 ', '\uD83E\uDD49 '];
+  const reactionRows = '<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,0.12);padding-top:8px;">'
+    + '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:6px;font-style:italic;">Reaksjonstider \u23F1</div>'
+    + times.map((t, i) => {
+        const medal = medals[i] || '';
+        const color = t.ms === null ? 'var(--pink)' : (t.isHuman ? 'var(--teal)' : 'var(--white)');
+        return '<div class="result-row">'
+          + '<span style="color:' + color + ';font-weight:' + (t.isHuman ? '700' : '400') + '">' + medal + t.name + '</span>'
+          + '<span style="color:' + color + ';font-weight:700">' + t.label + '</span>'
+          + '</div>';
+      }).join('')
+    + '</div>';
+
+  document.getElementById('modal-results').innerHTML = rows + reactionRows;
+}
+
+function onModalBtn() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  if (modalAction === 'newGame') startNewFullGame();
+  else dealRound();
+}
+
+// ================================================
+// RENDER
+// ================================================
+function renderAll() {
+  renderHumanHand(phase === 'passing');
+  PLAYERS.filter(p => !p.isHuman).forEach(p => renderNpcHand(p.id));
+}
+
+function renderHumanHand(clickable) {
+  const el = document.getElementById('human-hand');
+  el.innerHTML = '';
+  (hands.human || []).forEach(card => {
+    const div = document.createElement('div');
+    const isSwappable = card === swappableCard;
+    div.className = 'card-large'
+      + (RED.has(card.suit) ? ' red' : '')
+      + (card === selectedCard ? ' selected' : '')
+      + (isSwappable ? ' swappable' : '')
+      + (!clickable ? ' inert' : '');
+    div.innerHTML = '<div class="cv">' + card.value + '</div><div class="cs">' + card.suit + '</div>';
+    if (isSwappable) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'position:absolute;top:-6px;right:-6px;background:var(--orange);color:#fff;font-size:0.55rem;font-weight:700;border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;';
+      badge.textContent = '2x';
+      div.style.position = 'relative';
+      div.appendChild(badge);
+    }
+    if (clickable) div.onclick = () => humanClickCard(card);
+    el.appendChild(div);
+  });
+  const btn = document.getElementById('btn-pass');
+  if (btn) btn.disabled = !selectedCard;
+}
+
+function renderNpcHand(id) {
+  const el = document.getElementById('hand-'+id);
+  if (!el) return;
+  el.innerHTML = '';
+  (hands[id] || []).forEach(() => {
+    const div = document.createElement('div');
+    div.className = 'card-mini';
+    div.textContent = '\u2736';
+    el.appendChild(div);
+  });
+}
+
+function renderGrisAll() {
+  PLAYERS.forEach(p => {
+    const el = document.getElementById('gris-'+p.id);
+    if (!el) return;
+    const g = grisCount[p.id] || 0;
+    el.innerHTML = LETTERS.map((l,i) => '<span class="' + (i < g ? 'lit-'+l : '') + '">' + l + '</span>').join('');
+    const panelId = p.isHuman ? 'human-panel' : 'panel-'+p.id;
+    const panel = document.getElementById(panelId);
+    if (panel) panel.classList.toggle('is-out', !!eliminated[p.id]);
+  });
+}
+
+function showDiscard(card) {
+  const area = document.getElementById('discard-area');
+  if (!card) { area.innerHTML = '<span>\u2014</span>'; return; }
+  const div = document.createElement('div');
+  div.className = 'discard-card' + (RED.has(card.suit) ? ' red' : '');
+  div.innerHTML = '<div style="font-size:1rem;font-weight:700">' + card.value + '</div>'
+                + '<div style="font-size:1.4rem">' + card.suit + '</div>';
+  area.innerHTML = '';
+  area.appendChild(div);
+}
+
+function showUI(mode) {
+  const passBtn   = document.getElementById('btn-pass');
+  const swapBtn   = document.getElementById('btn-swap');
+  const thumbOver = document.getElementById('thumb-overlay');
+  hideThumbOverlay();
+
+  if (mode === 'passing') {
+    passBtn.classList.remove('hidden');
+    passBtn.disabled = !selectedCard;
+    if (swappableCard) swapBtn.classList.remove('hidden');
+    else swapBtn.classList.add('hidden');
+  } else if (mode === 'none') {
+    // Processing — keep pass button visible but greyed out
+    passBtn.classList.remove('hidden');
+    passBtn.disabled = true;
+    swapBtn.classList.add('hidden');
+  } else if (mode === 'thumbs') {
+    passBtn.classList.add('hidden');
+    swapBtn.classList.add('hidden');
+    thumbOver.classList.remove('hidden');
+    requestAnimationFrame(() => thumbOver.classList.add('visible'));
+    document.getElementById('thumb-big-btn').classList.remove('urgent');
+    document.getElementById('thumb-sublabel').textContent = 'Trykk N\xC5, klikk eller mellomrom \u2014 f\xF8r det er for sent!';
+  } else {
+    passBtn.classList.add('hidden');
+    swapBtn.classList.add('hidden');
+  }
+}
+
+function hideThumbOverlay() {
+  const o = document.getElementById('thumb-overlay');
+  o.classList.add('hidden');
+  o.classList.remove('visible');
+}
+
+function makeThumbUrgent() {
+  document.getElementById('thumb-big-btn').classList.add('urgent');
+  document.getElementById('thumb-sublabel').textContent = '\u26A0\uFE0F Andre legger ned! Skynd deg!';
+}
+
+function updateTableMsg(html) { document.getElementById('table-msg').innerHTML = html; }
+function setStatus(id, msg)   { const el = document.getElementById('pstatus-'+id); if (el) el.textContent = msg; }
+
+function addLog(msg, cls) {
+  const log = document.getElementById('log');
+  const p   = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = msg;
+  log.insertBefore(p, log.firstChild);
+  while (log.children.length > 40) log.removeChild(log.lastChild);
+}
+
+function updateScoreUI() {
+  PLAYERS.forEach(p => {
+    const el = document.getElementById('sc-'+p.id);
+    if (el) el.textContent = grisCount[p.id] || 0;
+  });
+}
+
+function showThumbFlash() {
+  const div = document.createElement('div');
+  div.className   = 'thumb-flash';
+  div.textContent = '\uD83D\uDC4D';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 1300);
+}
+
+function clearAllTimers() { timers.forEach(t => clearTimeout(t)); timers = []; }
+
+// Help popup
+function toggleHelp() {
+  const popup = document.getElementById('help-popup');
+  popup.classList.toggle('hidden');
+}
+document.addEventListener('click', e => {
+  const popup = document.getElementById('help-popup');
+  const btn   = document.getElementById('help-btn');
+  if (!popup.classList.contains('hidden') && !popup.contains(e.target) && e.target !== btn) {
+    popup.classList.add('hidden');
+  }
+});
+
+// Spacebar = tommel ned
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && phase === 'thumbs') {
+    e.preventDefault();
+    humanThumbDown();
+  }
+});
+
+// Init
+renderGrisAll();
+</script>
+</body>
+</html>
