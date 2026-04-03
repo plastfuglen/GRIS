@@ -651,6 +651,14 @@ function dealRound() {
 
   renderAll();
   renderGrisAll();
+
+  // If human is already eliminated, simulate the round instantly
+  if (eliminated.human) {
+    updateTableMsg('Simulerer NPC-runde...');
+    timers.push(setTimeout(simulateNpcRound, 600));
+    return;
+  }
+
   updateTableMsg('Velg ett kort og send videre!');
   setStatus('human', 'Klikk et kort, deretter \u201cSend videre\u201d');
   PLAYERS.filter(p => !p.isHuman && !eliminated[p.id]).forEach(p => setStatus(p.id, 'Tenker...'));
@@ -666,6 +674,65 @@ function dealRound() {
 
   showUI('passing');
   addLog('Ny runde! ' + handSize + ' kort delt ut.', 'log-hi');
+}
+
+function simulateNpcRound() {
+  const active = PLAYERS.filter(p => !eliminated[p.id]);
+  if (active.length <= 1) {
+    showGameOver(active[0], active.map(p => p.id));
+    return;
+  }
+
+  // Pick a random winner (the one who collected four of a kind)
+  const winnerId = active[Math.floor(Math.random() * active.length)].id;
+  const activeIds = active.map(p => p.id);
+
+  // Simulate reaction times for everyone except winner
+  humanReactionMs = null;
+  npcReactionMs = {};
+  npcReactionMs[winnerId] = 0;
+
+  const cfg = DIFF[difficulty];
+  const bases   = shuffle(cfg.npcBases);
+  const spreads = shuffle(cfg.npcSpreads);
+  active.filter(p => p.id !== winnerId).forEach((p, i) => {
+    const base   = (bases[i % bases.length]   || 300) + Math.random() * 60;
+    const spread = (spreads[i % spreads.length] || 200) + Math.random() * 60;
+    npcReactionMs[p.id] = Math.round(base + Math.random() * spread);
+  });
+
+  // Build thumbOrder sorted by reaction time (winner first, then by ms)
+  thumbsDown = new Set(activeIds);
+  thumbOrder = [winnerId, ...active
+    .filter(p => p.id !== winnerId)
+    .sort((a, b) => npcReactionMs[a.id] - npcReactionMs[b.id])
+    .map(p => p.id)
+  ];
+
+  const winner = PLAYERS.find(p => p.id === winnerId);
+  addLog(winner.name + ' hadde fire like! (simulert)', 'log-ok');
+
+  const loserId = thumbOrder[thumbOrder.length - 1];
+  const loser   = PLAYERS.find(p => p.id === loserId);
+
+  grisCount[loser.id]++;
+  const letter = LETTERS[grisCount[loser.id] - 1];
+  const isElim = grisCount[loser.id] >= 4;
+  if (isElim) eliminated[loser.id] = true;
+
+  addLog(loser.name + ' var sist! Får bokstaven "' + letter + '" 🐷', 'log-bad');
+  if (isElim) addLog(loser.name + ' staver GRIS og er ute! 🐷', 'log-bad');
+
+  updateScoreUI();
+  renderGrisAll();
+  showThumbFlash();
+
+  const remaining = PLAYERS.filter(p => !eliminated[p.id]);
+  if (remaining.length <= 1) {
+    timers.push(setTimeout(() => showGameOver(remaining[0], activeIds), 600));
+    return;
+  }
+  timers.push(setTimeout(() => showRoundModal(loser, letter, isElim, activeIds), 600));
 }
 
 // ================================================
@@ -921,7 +988,9 @@ function showRoundModal(loser, letter, isElim, activeIds) {
            : loser.name + ' f\xE5r bokstaven "' + letter + '" \u2192 ' + LETTERS.slice(0, grisCount[loser.id]).join('');
   fillModalResults(activeIds);
   modalAction = 'nextRound';
-  document.getElementById('modal-btn').textContent = '\u25B6 Neste runde';
+  document.getElementById('modal-btn').textContent = eliminated.human
+    ? '\u23E9 Simuler neste runde'
+    : '\u25B6 Neste runde';
   document.getElementById('modal-overlay').classList.remove('hidden');
 }
 
